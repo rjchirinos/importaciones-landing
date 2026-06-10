@@ -9,10 +9,40 @@ import { SendHorizonal } from "lucide-react";
 
 export function WaitlistForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+
+    const form = new FormData(e.currentTarget);
+
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.get("name"),
+          email: form.get("email"),
+          phone: form.get("phone"),
+          company: form.get("company"),
+          description: form.get("description"),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al guardar");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -127,18 +157,22 @@ export function WaitlistForm() {
                   htmlFor="description"
                   className="mb-1.5 block text-sm font-medium"
                 >
-                  Breve descripci&oacute;n de tu necesidad
+                  Breve descripci&oacute;n de tu necesidad*
                 </label>
                 <Textarea
                   id="description"
                   name="description"
                   placeholder="Cu&eacute;ntanos qu&eacute; productos importas y qu&eacute; desaf&iacute;os enfrentas con la clasificaci&oacute;n arancelaria..."
                   rows={3}
+                  required
                 />
               </div>
-              <Button type="submit" size="lg" className="mt-2">
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+              <Button type="submit" size="lg" className="mt-2" disabled={loading}>
                 <SendHorizonal />
-                Solicitar Acceso Anticipado
+                {loading ? "Enviando..." : "Solicitar Acceso Anticipado"}
               </Button>
             </form>
           </div>
